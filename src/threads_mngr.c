@@ -24,12 +24,12 @@ static const clock_t RUN_ON_THREADS_TIMEOUT = 2;
 
 /*================================= Globals ================================= */
 
-static redisAtomic run_on_thread_cb g_callback = NULL;
-static redisAtomic size_t g_tids_len = 0;
-static redisAtomic size_t g_num_threads_done = 0;
+static redisAtomic run_on_thread_cb g_callback;
+static redisAtomic size_t g_tids_len;
+static redisAtomic size_t g_num_threads_done;
 
 /* This flag is set while ThreadsManager_runOnThreads is running */
-static redisAtomic int g_in_progress = 0;
+static redisAtomic int g_in_progress;
 
 /*============================ Internal prototypes ========================== */
 
@@ -44,6 +44,12 @@ static void ThreadsManager_cleanups(void);
 /*============================ API functions implementations ========================== */
 
 void ThreadsManager_init(void) {
+    /* Initialize atomic variables */
+    atomicSet(g_callback, NULL);
+    atomicSet(g_tids_len, 0);
+    atomicSet(g_num_threads_done, 0);
+    atomicSet(g_in_progress, 0);
+    
     /* Register signal handler */
     struct sigaction act;
     sigemptyset(&act.sa_mask);

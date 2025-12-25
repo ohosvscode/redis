@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include "pthread_compat.h"
 #include <syslog.h>
 #include <netinet/in.h>
 #include <sys/socket.h>

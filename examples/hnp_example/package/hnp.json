@@ -1,0 +1,14 @@
+{
+    "name": "my_hnp_project",
+    "version": "1.0.0",
+    "arch": "aarch64",
+    "description": "A simple HarmonyOS Native Package example",
+    "files": [
+        {
+            "src": "my_hnp_app",
+            "dest": "/bin/my_hnp_app",
+            "mode": "0755"
+        }
+    ]
+}
+

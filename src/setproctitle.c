@@ -233,6 +233,7 @@ void spt_init(int argc, char *argv[]) {
 		goto syerr;
 
 #if __linux__
+	#ifdef __GLIBC__
 	if (!(tmp = strdup(program_invocation_name)))
 		goto syerr;
 
@@ -242,6 +243,7 @@ void spt_init(int argc, char *argv[]) {
 		goto syerr;
 
 	program_invocation_short_name = tmp;
+	#endif /* __GLIBC__ */
 #elif __APPLE__
 	if (!(tmp = strdup(getprogname())))
 		goto syerr;

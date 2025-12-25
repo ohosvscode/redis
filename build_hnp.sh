@@ -160,3 +160,7 @@ echo "编译完成！"
 echo "HNP 文件: redis.hnp"
 echo "========================================="
 ls -lh redis.hnp
+
+# redis.hnp移动到ohos/hnp/arm64-v8a/redis.hnp
+mv redis.hnp ./ohos/hnp/arm64-v8a/redis.hnp
+echo "redis.hnp移动到ohos/hnp/arm64-v8a/redis.hnp完成! "

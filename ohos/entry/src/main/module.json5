@@ -10,12 +10,12 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
-//    "hnpPackages": [
-//      {
-//        "package": "redis.hnp",
-//        "type": "public"
-//      }
-//    ],
+    "hnpPackages": [
+      {
+        "package": "redis.hnp",
+        "type": "public"
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET"

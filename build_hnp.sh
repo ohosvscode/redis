@@ -204,7 +204,7 @@ PACK_INFO_PATH="$BUILD_DIR/outputs/default/pack.info"
 PKG_CONTEXT_PATH="$BUILD_DIR/intermediates/loader/default/pkgContextInfo.json"
 HNP_SOURCE_PATH="$REDIS_DIR/ohos/hnp"
 BUILD_PROFILE_PATH="$REDIS_DIR/ohos/build-profile.json5"
-
+RESOURCES_PATH="$REDIS_DIR/ohos/entry/src/main/resources"
 # 从 build-profile.json5 提取签名和证书路径
 echo "从 build-profile.json5 提取签名配置..."
 EXTRACT_SCRIPT="$REDIS_DIR/extract_build_profile.js"
@@ -273,7 +273,8 @@ java -jar "$APP_PACKING_TOOL" \
     --pack-info-path "$PACK_INFO_PATH" \
     --pkg-context-path "$PKG_CONTEXT_PATH" \
     --force true \
-    --hnp-path "$HNP_SOURCE_PATH"
+    --hnp-path "$HNP_SOURCE_PATH"\
+    --resources-path "$RESOURCES_PATH"
 
 if [ $? -ne 0 ]; then
     echo "错误: HAP 文件生成失败"

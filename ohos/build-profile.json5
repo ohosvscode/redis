@@ -6,9 +6,9 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "/Users/naily/Documents/Developer/ohos-sign/redis/redis.p12",
-          "storePassword": "0000001AABCA48529C47236EC75F38C06E2A8A485DBE81AD494D0F6C491BC1DFF97A004F565986B0FD5B",
+          "storePassword": "0000001A906859D82E31FC63CA3AB686199F8D7931B7343039208E605EDD3AEC03DC9958E06887E11FAE",
           "keyAlias": "naily",
-          "keyPassword": "0000001A62882D9BB795E98F4D1E364B0CE55307A638AD0F56E01DFDE22350337729C3FF17BD1E6F8E27",
+          "keyPassword": "0000001AA10E4E0519216311933E44AE98E32F26ABBF831062998BEA0E0F8D3A3ED35EA34AC0B787A532",
           "signAlg": "SHA256withECDSA",
           "profile": "/Users/naily/Documents/Developer/ohos-sign/redis/redis.p7b",
           "certpath": "/Users/naily/Documents/Developer/ohos-sign/redis/redis.cer"

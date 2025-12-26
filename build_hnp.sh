@@ -404,6 +404,19 @@ if [ -f "$HAP_SIGN_TOOL" ] && [ -n "$SIGNATURE_PATH" ] && [ -n "$CERTIFICATE_PAT
         if [ "$SIGN_SUCCESS" = true ]; then
             echo "HAP 文件签名成功: $SIGNED_HAP_PATH"
             OUT_PATH="$SIGNED_HAP_PATH"
+            # 验证签名后的 HAP 文件
+            echo "验证 HAP 文件签名..."
+            VERIFY_OUTPUT=$(java -jar "$HAP_SIGN_TOOL" verify-app \
+                -inFile "$SIGNED_HAP_PATH" \
+                -outCertChain /tmp/hap_cert_chain.cer \
+                -outProfile /tmp/hap_profile.p7b 2>&1)
+            VERIFY_RESULT=$?
+            if [ $VERIFY_RESULT -eq 0 ]; then
+                echo "✓ HAP 文件签名验证成功"
+            else
+                echo "⚠ HAP 文件签名验证失败或工具不支持验证"
+                echo "$VERIFY_OUTPUT" | head -10
+            fi
         else
             echo "错误: HAP 文件签名失败"
             if [ "$PASSWORD_ENCRYPTED" = true ]; then
@@ -416,6 +429,8 @@ if [ -f "$HAP_SIGN_TOOL" ] && [ -n "$SIGNATURE_PATH" ] && [ -n "$CERTIFICATE_PAT
                 echo "  2. 或者手动签名 HAP 文件："
                 echo "     java -jar $HAP_SIGN_TOOL sign-app -mode localSign ..."
                 echo "  3. 或者使用 DevEco Studio 构建项目（会自动处理加密密码）"
+                echo ""
+                echo "⚠ 警告: HAP 文件未签名，生成的 APP 包将无法通过 App Gallery Connect 验证（错误码 991）"
             else
                 echo "请检查签名配置和文件路径"
                 echo "签名工具输出已保存到: /tmp/hap_sign_output.log"
@@ -447,3 +462,165 @@ echo "HAP 文件生成完成！"
 echo "HAP 文件: $OUT_PATH"
 echo "========================================="
 ls -lh "$OUT_PATH" 2>/dev/null || echo "HAP 文件路径: $OUT_PATH"
+
+# 生成 APP 文件
+echo ""
+echo "========================================="
+echo "开始生成 APP 文件..."
+echo "========================================="
+
+# 确定用于打包的 HAP 文件（优先使用已签名的 HAP）
+HAP_FOR_APP="$OUT_PATH"
+HAP_IS_SIGNED=false
+
+if [ -f "$SIGNED_HAP_PATH" ] && [ "$SIGN_SUCCESS" = true ]; then
+    HAP_FOR_APP="$SIGNED_HAP_PATH"
+    HAP_IS_SIGNED=true
+    echo "✓ 使用已签名的 HAP 文件: $HAP_FOR_APP"
+elif echo "$OUT_PATH" | grep -q "unsigned"; then
+    echo "⚠ 警告: HAP 文件未签名"
+    echo "  HAP 文件: $OUT_PATH"
+    echo ""
+    echo "重要提示: App Gallery Connect 要求 APP 包必须正确签名！"
+    echo "如果 HAP 文件未签名，生成的 APP 包将无法通过验证（错误码 991）。"
+    echo ""
+    echo "解决方案："
+    echo "  1. 设置环境变量提供明文密码（推荐）："
+    echo "     export HAP_STORE_PASSWORD='你的明文keystore密码'"
+    echo "     export HAP_KEY_PASSWORD='你的明文key密码'"
+    echo "     然后重新运行脚本"
+    echo ""
+    echo "  2. 或者使用 DevEco Studio 构建项目（会自动处理签名）"
+    echo ""
+    echo "是否继续使用未签名的 HAP 打包 APP？（可能会失败）"
+    echo "按 Ctrl+C 取消，或等待 5 秒后继续..."
+    sleep 5
+else
+    # 检查 HAP 文件是否已签名（通过文件名判断）
+    if echo "$OUT_PATH" | grep -q "signed"; then
+        HAP_IS_SIGNED=true
+        echo "✓ 检测到已签名的 HAP 文件: $OUT_PATH"
+    fi
+fi
+
+APP_OUT_PATH="${HAP_FOR_APP%.hap}.app"
+if [ "$HAP_FOR_APP" = "$APP_OUT_PATH" ]; then
+    APP_OUT_PATH="${BUILD_DIR}/outputs/default/entry-default.app"
+fi
+
+# 检查 pack.info 文件是否存在
+if [ ! -f "$PACK_INFO_PATH" ]; then
+    echo "错误: pack.info 文件未找到: $PACK_INFO_PATH"
+    echo "请确保已构建 HAP 项目"
+    echo "跳过 APP 文件生成"
+    exit 1
+elif [ ! -f "$HAP_FOR_APP" ]; then
+    echo "错误: HAP 文件不存在: $HAP_FOR_APP"
+    echo "跳过 APP 文件生成"
+    exit 1
+else
+    echo "使用 app_packing_tool 生成 APP 文件..."
+    echo "  - HAP 文件: $HAP_FOR_APP"
+    echo "  - HAP 签名状态: $([ "$HAP_IS_SIGNED" = true ] && echo "已签名" || echo "未签名")"
+    echo "  - pack.info: $PACK_INFO_PATH"
+    echo "  - 输出文件: $APP_OUT_PATH"
+    
+    # 构建 APP 打包命令
+    # 根据文档，app 模式需要：
+    # 1. --pack-info-path（必需）
+    # 2. --out-path（必需）
+    # 3. --hap-path（可选，但我们需要）
+    # 
+    # 重要说明：
+    # - app 模式会校验 HAP 的合法性，包括签名状态
+    # - 如果 HAP 文件已正确签名，APP 打包时会自动使用 HAP 中的签名信息
+    # - --signature-path 和 --certificate-path 参数会将文件打包进 APP，而不是用于签名
+    # - 因此，如果 HAP 已签名，不应该提供这些参数
+    APP_CMD="java -jar \"$APP_PACKING_TOOL\" \
+        --mode app \
+        --hap-path \"$HAP_FOR_APP\" \
+        --pack-info-path \"$PACK_INFO_PATH\" \
+        --out-path \"$APP_OUT_PATH\" \
+        --force true"
+    
+    # 注意：不添加 --signature-path 和 --certificate-path 参数
+    # 因为这些参数会将签名文件打包进 APP，而不是用于签名
+    # 正确的流程是：HAP 文件已经签名，APP 打包时会自动使用 HAP 中的签名信息
+    if [ "$HAP_IS_SIGNED" != true ]; then
+        echo "  ⚠ 警告: HAP 文件未签名"
+        echo "    生成的 APP 包可能无法通过 App Gallery Connect 验证（错误码 991）"
+        echo "    建议：确保 HAP 文件已正确签名后再打包 APP"
+    else
+        echo "  ✓ HAP 文件已签名，APP 打包时会自动使用 HAP 中的签名信息"
+    fi
+    
+    echo ""
+    eval "$APP_CMD"
+    APP_PACK_RESULT=$?
+    
+    if [ $APP_PACK_RESULT -eq 0 ] && [ -f "$APP_OUT_PATH" ]; then
+        echo "========================================="
+        echo "APP 文件生成成功！"
+        echo "APP 文件: $APP_OUT_PATH"
+        echo "========================================="
+        ls -lh "$APP_OUT_PATH"
+        
+        # 根据文档，app_packing_tool 的 app 模式支持 --signature-path 和 --certificate-path
+        # 这些参数应该在打包时已经提供（如果可用）
+        # 如果仍然出现错误码 991，可能的原因：
+        # 1. HAP 文件未正确签名
+        # 2. 签名文件路径不正确
+        # 3. APP 打包时的签名参数不足以完成完整签名
+        
+        echo ""
+        echo "========================================="
+        if [ "$HAP_IS_SIGNED" = true ] && [ -n "$SIGNATURE_PATH" ] && [ -n "$CERTIFICATE_PATH" ]; then
+            echo "✓ APP 文件已生成"
+            echo "  - HAP 文件已签名"
+            echo "  - APP 打包时已提供签名参数"
+            echo "APP 文件: $APP_OUT_PATH"
+            echo ""
+            echo "如果上传到 App Gallery Connect 时仍然出现错误码 991，可能的原因："
+            echo "  1. HAP 文件签名不完整或有问题"
+            echo "  2. 签名文件（.p7b 或 .cer）路径不正确或文件损坏"
+            echo "  3. app_packing_tool 的 app 模式可能需要额外的签名信息"
+            echo ""
+            echo "建议："
+            echo "  1. 检查 HAP 文件签名是否完整："
+            echo "     java -jar $HAP_SIGN_TOOL verify-app -inFile \"$HAP_FOR_APP\" ..."
+            echo "  2. 验证签名文件是否存在且有效："
+            echo "     - 签名文件: $SIGNATURE_PATH"
+            echo "     - 证书文件: $CERTIFICATE_PATH"
+            echo "  3. 如果问题仍然存在，可能需要使用 DevEco Studio 构建项目"
+        elif [ "$HAP_IS_SIGNED" = true ]; then
+            echo "✓ APP 文件已生成（HAP 已签名）"
+            echo "APP 文件: $APP_OUT_PATH"
+            echo ""
+            echo "⚠ 警告: APP 打包时未提供签名参数（--signature-path 和 --certificate-path）"
+            echo "  这可能导致 APP 包无法通过 App Gallery Connect 验证（错误码 991）"
+            echo ""
+            echo "建议："
+            echo "  1. 检查 build-profile.json5 中的签名配置"
+            echo "  2. 确保签名文件和证书文件路径正确"
+        else
+            echo "⚠ APP 文件已生成，但可能未正确签名"
+            echo "APP 文件: $APP_OUT_PATH"
+            echo ""
+            echo "如果上传时出现错误码 991（非法软件包），请："
+            echo "  1. 设置环境变量提供明文密码："
+            echo "     export HAP_STORE_PASSWORD='你的明文keystore密码'"
+            echo "     export HAP_KEY_PASSWORD='你的明文key密码'"
+            echo "     然后重新运行脚本"
+            echo ""
+            echo "  2. 或者使用 DevEco Studio 构建项目（会自动处理签名）"
+        fi
+        echo "========================================="
+    else
+        echo "错误: APP 文件生成失败（退出码: $APP_PACK_RESULT）"
+        echo "请检查："
+        echo "  1. HAP 文件是否存在且有效: $HAP_FOR_APP"
+        echo "  2. pack.info 文件是否存在: $PACK_INFO_PATH"
+        echo "  3. 签名文件路径是否正确（如果使用了签名参数）"
+        exit 1
+    fi
+fi

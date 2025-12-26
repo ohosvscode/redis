@@ -1,0 +1,17 @@
+{
+    "type": "hnp-config",
+    "name": "redis",
+    "version": "8.4.0",
+    "install": {
+        "links": [
+            {
+                "source": "/bin/redis-server",
+                "target": "redis-server"
+            },
+            {
+                "source": "/bin/redis-cli",
+                "target": "redis-cli"
+            }
+        ]
+    }
+}

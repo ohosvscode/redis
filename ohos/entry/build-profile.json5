@@ -19,12 +19,23 @@
             ]
           }
         }
+      },
+      "nativeLib": {
+        "debugSymbol": {
+          "strip": true,
+          "exclude": []
+        }
       }
     },
   ],
   "targets": [
     {
-      "name": "default"
+      "name": "default",
+      "config": {
+        "deviceType": [
+          "2in1"
+        ]
+      }
     },
     {
       "name": "ohosTest",

@@ -2,7 +2,7 @@
   "string": [
     {
       "name": "app_name",
-      "value": "redis"
+      "value": "Redis 8.4.0"
     }
   ]
 }
